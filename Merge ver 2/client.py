@@ -6,6 +6,7 @@ import json
 # server port and host
 format = 'utf8'
 myPort=None
+myHost=None
 # print('client')
 # sendList
 def find_free_port(host,start_port, end_port):
@@ -13,7 +14,7 @@ def find_free_port(host,start_port, end_port):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((host, port))
-            return port
+            return str(port)
         except socket.error as e:
             continue
     return None
@@ -21,7 +22,7 @@ def find_free_port(host,start_port, end_port):
 def getIPAddress():
     host_name = socket.gethostname()
     ip_address = socket.gethostbyname(host_name)
-    return ip_address
+    return str(ip_address)
 
 def send_file_to_client(fileName, conn):
   current_directory = os.getcwd()
@@ -79,25 +80,26 @@ def handleClient(conn, addr):
     # print('conection: ', conn.getsockname())
     msg=None
     while(msg!='x'):
-      msg = conn.recv(1024).decode(format)
-      if (msg == "discover"):
-        json_file_name = "repository.json"
-        with open(json_file_name, "r") as json_file:
-            filedata = json.load(json_file)  
-        file_data_str = json.dumps(filedata, indent=2)
-        conn.sendall(file_data_str.encode(format)) 
-      elif 'download' in msg.lower():
-        temp = msg.split()[1]
-        send_file_to_client(temp,conn)
+      try:
+        msg = conn.recv(1024).decode(format)
+        if (msg == "discover"):
+          json_file_name = "repository.json"
+          with open(json_file_name, "r") as json_file:
+              filedata = json.load(json_file)  
+          file_data_str = json.dumps(filedata, indent=2)
+          conn.sendall(file_data_str.encode(format)) 
+        elif 'download' in msg.lower():
+          temp = msg.split()[1]
+          send_file_to_client(temp,conn)
+      except Exception as e:
+        print(f"Đã xảy ra lỗi: {type(e).__name__} - {str(e)}")
     print('client addrees', addr, 'finish')
     print(conn.getsockname(),'closed')
     conn.close()
 # tạo p2p server
 def createP2PServer():
-  myHost = getIPAddress()
-  myPort = find_free_port(myHost,22222,33333)
-  #myHost = '192.168.1.3'
-  #myPort = 65314
+  myHost = '172.17.18.62'
+  myPort = 8888
   P2Pserver=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
   P2Pserver.bind((myHost,myPort))
   P2Pserver.listen(3)
@@ -108,8 +110,8 @@ def createP2PServer():
       thread = threading.Thread(target=handleClient, args=(conection,addr))
       thread.daemon = False
       thread.start()
-    except:
-      print('error')
+    except Exception as e:
+      print(f"Đã xảy ra lỗi: {type(e).__name__} - {str(e)}")
       conection.close()
       
 def sendList(client,list):
@@ -176,7 +178,7 @@ def removeFile(lname,fname):
       json.dump(data, file, indent=2)
 # main
 def main():
-  host = '172.17.21.87'
+  host = '127.0.0.1'
   server_port = 65315
   client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
   try:
@@ -212,6 +214,8 @@ def main():
     client.close()
   
 if __name__ == "__main__":
+  myHost = getIPAddress()
+  myPort = find_free_port(myHost,22222,33333)
   serverThread = threading.Thread(target=main)
   p2pThread = threading.Thread(target=createP2PServer)
   serverThread.daemon = False

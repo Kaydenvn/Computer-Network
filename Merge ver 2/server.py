@@ -2,13 +2,11 @@ import socket
 import threading
 import pyodbc
 import json
-dirver ='ODBC Driver 17 for SQL Server'
-sqlServer='MSI\SQLEXPRESS;Database=BTL_MMT'
 sqlUsername ='test1'
 sqlPassword ='123456'
 connections = []
 # conect database
-conx = pyodbc.connect(f'DRIVER={dirver};SERVER={sqlServer};UID={sqlUsername};PWD={sqlPassword};')
+conx = pyodbc.connect(r'DRIVER={ODBC Driver 17 for SQL Server}; SERVER=MSI\SQLEXPRESS; Database=BTL_MMT; UID=test1; PWD=123456;')
 cursor = conx.cursor()
 # cursor.execute('select * from OnlineAccount')
 # data=cursor.fetchall()
@@ -118,7 +116,7 @@ def handleClient(conn, addr):
     while (msg != "x"):
         msg = conn.recv(1024).decode(format)
         parts = msg.split()
-        print("client ",addr, "says", msg)    
+       # print("client ",addr, "says", msg)    
         if (msg == "login"):
             conn.sendall(msg.encode(format))
             loginName=serverLogin(conn,addr)   
@@ -176,10 +174,10 @@ def discover(name):
         if connection['user']==name:
             print("discover host:",name)
     sock1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    LISTEN_PORT=8888
+    LISTEN_PORT=8888 #can sua
     try:
-        sock1.connect(("127.0.0.1", LISTEN_PORT))
-        print(f"[*] Connected to peer at 127.0.0.1")    
+        sock1.connect(('172.17.18.62', LISTEN_PORT))
+        print(f"[*] Connected to peer at absadsa")    
         
         # Send data to peer
         sock1.sendall("discover".encode(format))

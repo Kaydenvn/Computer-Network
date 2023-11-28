@@ -14,5 +14,9 @@
   {
     "LocalFileName": "test.txt",
     "SharedFileName": "tests.txt"
+  },
+  {
+    "LocalFileName": "file1.txt",
+    "SharedFileName": "file1s.txt"
   }
 ]

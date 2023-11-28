@@ -29,14 +29,12 @@ def getIPAddress():
     return str(ip_address)
 
 def send_file_to_client(fileName, conn):
-  print('1')
   with open("repository.json", "r") as json_file:
     filedata = json.load(json_file) 
   for data in filedata:
     if data["SharedFileName"] == fileName:
       fileName=data["LocalFileName"]
       break
-  print('2')
   current_directory = os.getcwd()
   file_path = os.path.join(current_directory, fileName)
   try:
@@ -60,12 +58,16 @@ def fetchFile(filename: str, client):
   fetchIp=client_data[0]['ip']
   fetchPort=client_data[0]['port']
   clientFetch = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+  print('1')
   clientFetch.connect((fetchIp,int(fetchPort)))
+  print('2')
   msg = 'DOWNLOAD '+filename
   clientFetch.sendall(msg.encode(format))
+  print('3')
   try:
         # Nhận kích thước của file từ server
         file_size_bytes = clientFetch.recv(4)
+        print('4')
         print('filesizeByte: ',file_size_bytes)
         file_size = int.from_bytes(file_size_bytes, byteorder='big')
         print('fileSize: ', file_size)
@@ -90,6 +92,7 @@ def fetchFile(filename: str, client):
             new_file.write(file_content)
 
         print(f"Đã nhận và lưu file {filename} thành công.")
+        publishFile(filename,filename)
   except Exception as e:
         print(f"Lỗi khi nhận và lưu file: {str(e)}")
 def handleClient(conn, addr):
@@ -117,8 +120,7 @@ def createP2PServer():
   myHost='127.0.0.1'
   P2Pserver=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
   P2Pserver.bind((myHost,myPort))
-  P2Pserver.listen(3)
-  print('server listening')
+  P2Pserver.listen(5)
   while(True):
     try:
       conection,addr=P2Pserver.accept()
@@ -156,6 +158,22 @@ def getAvailable(filename,client):
   else: 
     print(f'không tồn tại file {filename} trong hệ thống')
     return None
+
+def clientSignup(client):
+    account = []
+    username = input('username:')
+    password = input('password:')
+
+    # Check username and password validation
+    account.append(username)
+    account.append(password)
+    
+    # Send account to server
+    sendList(client, account)
+
+    # Receive response from server
+    validCheck = client.recv(1024).decode(format)
+    print(validCheck)  
 
 def clientLogin(client):
     account = []
@@ -203,36 +221,35 @@ def main():
   try:
     client.connect((host,server_port))
     msg = None
-    while msg != "x":
+    while True:
       msg = input("Command: ")
-      if(msg=='x'):
+      temp = msg.split()
+      if(msg=="exit"):
         client.close()
-      if msg == "login": 
+      elif msg == "login": 
         client.sendall(msg.encode(format))
         client.recv(1024)
         clientLogin(client)
-      # if(msg =='geta'):
-      #  getAvailable('a',client)
-      # if(msg =='getb'):
-      #  getAvailable('b',client)
-      # if(msg =='getc'):
-      #   getAvailable('c',client)
-      if 'getavailable' in msg.lower():
-        temp = msg.split()[1]
-        getAvailable(temp,client)
-      if 'fetch' in msg.lower():
-        temp = msg.split()[1]
-        threadfetch = threading.Thread(target=fetchFile, args=(temp,client))
-        threadfetch.daemon=False
-        threadfetch.start()
-      if 'publish' in msg.lower():
-        parts = msg.split()
+      elif msg == "signup":
         client.sendall(msg.encode(format))
-        publishFile(parts[1],parts[2])
-      if 'remove' in msg.lower():
-        parts = msg.split()
+        clientSignup(client)
+      elif msg == "logout":
         client.sendall(msg.encode(format))
-        removeFile(parts[1],parts[2])
+        msg = client.recv(1024).decode(format)
+        print(msg)
+      elif len(temp)==2:
+        if 'getavailable' in msg.lower():
+          getAvailable(temp[1],client)
+        if 'fetch' in msg.lower():
+          threadfetch = threading.Thread(target=fetchFile, args=(temp[1],client))
+          threadfetch.daemon=False
+          threadfetch.start()
+        if 'publish' in msg.lower():
+          client.sendall(msg.encode(format))
+          publishFile(temp[1],temp[2])
+        if 'remove' in msg.lower():
+          client.sendall(msg.encode(format))
+          removeFile(temp[1],temp[2])
   except Exception as e:
     print('error: ', e)
     client.close()

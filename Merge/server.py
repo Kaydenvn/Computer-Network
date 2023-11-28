@@ -4,16 +4,9 @@ import pyodbc
 import json
 sqlUsername ='test1'
 sqlPassword ='123456'
-connections = []
 # conect database
 conx = pyodbc.connect(r'DRIVER={ODBC Driver 17 for SQL Server}; SERVER=MSI\SQLEXPRESS; Database=BTL_MMT; UID=test1; PWD=123456;')
 cursor = conx.cursor()
-# cursor.execute('select * from OnlineAccount')
-# data=cursor.fetchall()
-# print(data)
-# cursor.execute("insert OnlineAccount values('u','123')")
-# conx.commit()
-# conx.close()
 
 #connections='conn' 'addr''user''ip''port')
 
@@ -35,19 +28,18 @@ def getIPAddress():
     ip_address = socket.gethostbyname(host_name)
     return ip_address
 
-def createServer():
+def createServer(connections):
   #host=getIPAdress()
   #server_port=find_free_port(host,11111,22222)
   host = '127.0.0.1'
   server_port = 65315
   server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
   server.bind((host,server_port))
-  server.listen(5)
-  print('server listening')
+  server.listen(10)
   while(True):
     try:
       conection,addr=server.accept()
-      thread = threading.Thread(target=handleClient, args=(conection,addr))
+      thread = threading.Thread(target=handleClient, args=(conection,addr,connections))
       thread.daemon = False
       thread.start()
     except Exception as e:
@@ -83,8 +75,18 @@ def recvList(conn):
         item = conn.recv(1024).decode(format)
     
     return list
-
-
+def serverSignup(conn):
+    client_account = recvList(conn)
+    cursor.execute("select UserName from Users")
+    datas=cursor.fetchall()
+    if any(client_account[0] in data for data in datas):
+        msg = "User name already exists"
+        conn.sendall(msg.encode(format))
+    else:
+        cursor.execute("INSERT INTO Users (UserName, Pass) VALUES (?, ?)", client_account[0], client_account[1])
+        msg = "Sign up successfully"
+        conn.sendall(msg.encode(format))
+        conx.commit()
 def serverLogin(conn,addr):
 
     # recv account from client
@@ -99,7 +101,6 @@ def serverLogin(conn,addr):
     msg = "ok"
     if (client_account[1] == data_password):
         msg = "Login successfully"
-        print(msg)
         conn.sendall(msg.encode(format))
         client_port=conn.recv(1024).decode(format)
         connections.append({'conn': conn, 'addr': addr,'user':client_account[0],'ip':addr[0],'port':client_port})
@@ -110,7 +111,7 @@ def serverLogin(conn,addr):
         conn.sendall(msg.encode(format))
     return None
      
-def handleClient(conn, addr):
+def handleClient(conn, addr, connections):
     print('client address: ', addr)
     # print('conection: ', conn.getsockname())
     msg=None
@@ -122,14 +123,24 @@ def handleClient(conn, addr):
         if (msg == "login"):
             conn.sendall(msg.encode(format))
             loginName=serverLogin(conn,addr)   
-        elif 'getfileholder' in msg.lower():
-            temp = msg.split()[1]
-            sendFileHolder(temp,conn)     
-        elif len(parts) >= 3:
+        elif (msg == "signup"):
+            conn.sendall(msg.encode(format))
+            serverSignup(conn)
+        elif (msg == "logout"):
+            for connection in connections:
+                if connection['user']==loginName:
+                    connections.remove(connection)
+                    break
+            msg = "Log out successfully"
+            conn.sendall(msg.encode(format))
+        elif len(parts) == 3:
             if parts[0]=="publish":
                 publishFile(parts[1],parts[2],loginName)
             if parts[0]=="remove":
                 removeFile(parts[1],parts[2],loginName)
+        elif len(parts) == 2:
+            if 'getfileholder' in msg.lower():
+                sendFileHolder(parts[1],conn)  
     if loginName!=None:
         connections = list(filter(lambda item: not (item['conn'] == conn and item['addr'] == addr and item['user'] == loginName), connections))
 
@@ -155,14 +166,14 @@ def serverCommand():
     while True:
         try:
             command = input("Enter a command: ")
+            temp = command.split()
             if command.lower() == 'exit':
                 break
-            elif 'ping' in command.lower():
-                temp = command.split()[1]
-                ping(temp)
-            elif 'discover' in command.lower():
-                temp = command.split()[1]
-                discover(temp)
+            elif len(temp)==2:
+                if 'ping' in command.lower():
+                    ping(temp[1])
+                elif 'discover' in command.lower():
+                    discover(temp[1])
             else:
                 print(f"Unknown command: {command}")
         except:
@@ -195,6 +206,7 @@ def discover(name):
         sock1.close()
 # ------------------------------------------------------
 if __name__ == "__main__":
-    server_thread = threading.Thread(target=createServer)
+    connections=[]
+    server_thread = threading.Thread(target=createServer,args=(connections,))
     server_thread.start()
     serverCommand()

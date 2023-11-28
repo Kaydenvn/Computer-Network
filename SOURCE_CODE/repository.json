@@ -1,0 +1,26 @@
+[
+  {
+    "LocalFileName": "file1.txt",
+    "SharedFileName": "shared_file1.txt"
+  },
+  {
+    "LocalFileName": "file2.txt",
+    "SharedFileName": "shared_file2.txt"
+  },
+  {
+    "LocalFileName": "file3.txt",
+    "SharedFileName": "shared_file3.txt"
+  },
+  {
+    "LocalFileName": "test.txt",
+    "SharedFileName": "tests.txt"
+  },
+  {
+    "LocalFileName": "file1.txt",
+    "SharedFileName": "file1s.txt"
+  },
+  {
+    "LocalFileName": "test2.txt",
+    "SharedFileName": "test2s.txt"
+  }
+]

@@ -29,7 +29,7 @@ def getIPAddress():
     return str(ip_address)
 
 def send_file_to_client(fileName, conn):
-  with open("repository.json", "r") as json_file:
+  with open("repository.json", "r") as json_file: 
     filedata = json.load(json_file) 
   for data in filedata:
     if data["SharedFileName"] == fileName:
@@ -153,6 +153,7 @@ def getAvailable(filename,client):
     return None
 
 def clientSignup(client):
+    client.sendall("signup".encode(format))
     account = []
     username = input('username:')
     password = input('password:')
@@ -169,6 +170,8 @@ def clientSignup(client):
     print(validCheck)  
 
 def clientLogin(client):
+    client.sendall("login".encode(format))
+    client.recv(1024)
     account = []
     username = input('username:')
     password = input('password:')
@@ -211,6 +214,10 @@ def removeFile(lname,fname):
     data = [item for item in data if (item["LocalFileName"] != file_to_remove["LocalFileName"]) or (item["SharedFileName"] != file_to_remove["SharedFileName"])]
     with open('repository.json', 'w') as file:
       json.dump(data, file, indent=2)
+def clientLogout(client):
+    client.sendall("logout".encode(format))
+    msg = client.recv(1024).decode(format)
+    print(msg)
 # main
 def main():
   host = '127.0.0.1'
@@ -225,16 +232,11 @@ def main():
       if(msg=="exit"):
         client.close()
       elif msg == "login": 
-        client.sendall(msg.encode(format))
-        client.recv(1024)
         clientLogin(client)
       elif msg == "signup":
-        client.sendall(msg.encode(format))
         clientSignup(client)
       elif msg == "logout":
-        client.sendall(msg.encode(format))
-        msg = client.recv(1024).decode(format)
-        print(msg)
+        clientLogout(client)
       elif len(temp)==2:
         if 'getavailable' in msg.lower():
           getAvailable(temp[1],client)

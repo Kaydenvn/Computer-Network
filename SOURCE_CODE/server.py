@@ -108,7 +108,7 @@ def serverLogin(conn,addr):
         conn.sendall(msg.encode(format))
         client_port=conn.recv(1024).decode(format)
         connections.append({'conn': conn, 'addr': addr,'user':client_account[0],'ip':addr[0],'port':client_port})
-        print("User ", client_account[0], " login!")
+        print("User", client_account[0], "login!")
         return client_account[0]
     else:
         msg = "Invalid password"
@@ -131,8 +131,11 @@ def handleClient(conn, addr, connections):
         parts = msg.split()
        # print("client ",addr, "says", msg)    
         if (msg == "login"):
-            conn.sendall(msg.encode(format))
-            loginName=serverLogin(conn,addr)   
+            if loginName==None:
+                conn.sendall(msg.encode(format))
+                loginName=serverLogin(conn,addr)
+            else:
+                print("You are already logged in")
         elif (msg == "signup"):
             conn.sendall(msg.encode(format))
             serverSignup(conn)
@@ -171,6 +174,8 @@ def serverCommand():
             temp = command.split()
             if command.lower() == 'exit':
                 break
+            elif command=="ping":
+                pingAll()
             elif len(temp)==2:
                 if 'ping' in command.lower():
                     ping(temp[1])
@@ -180,6 +185,9 @@ def serverCommand():
                 print(f"Unknown command: {command}")
         except:
             print("Error Command")
+def pingAll():
+    for connection in connections:
+        print(connection['user'],":",connection['addr'])
 def ping(name):
     for connection in connections:
         if connection['user']==name:
